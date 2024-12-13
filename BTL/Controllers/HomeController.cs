@@ -258,7 +258,7 @@ namespace BTL.Controllers
 
             return Json(products, JsonRequestBehavior.AllowGet);
         }
-       
+
 
         public ActionResult ProductSale()
         {
@@ -272,27 +272,33 @@ namespace BTL.Controllers
             if (discountProductList != null)
             {
                 discountPercentage = discountProductList.DiscountPercentage;
+
                 Session["DiscountPercentage"] = discountPercentage;
+
+                var discountProgramID = discountProductList.DiscountProgramID;
+
+                ViewBag.DiscountProgramName = discountProductList.DiscountProgramName;
+
+                var discountedProducts = menShopEntities.DiscountProducts
+                                                        .Where(dp => dp.DiscountProgramID == discountProgramID)
+                                                        .Select(dp => dp.Product)
+                                                        .ToList();
+
+                var discountedProductIDs = discountedProducts.Select(p => p.ProductID).ToList();
+                Session["DiscountedProductIDs"] = discountedProductIDs;
+
+                var finalPrices = discountedProducts.ToDictionary(
+                    p => p.ProductID,
+                    p => p.Price - (p.Price * discountPercentage / 100)
+                );
+                Session["FinalPrices"] = finalPrices;
+
+                return PartialView(discountedProducts);
             }
 
-            if (discountProductList == null)
-            {
-                return View(new List<Product>().ToPagedList(1, 2));
-            }
-
-            var discountProgramID = discountProductList.DiscountProgramID;
-
-            var discountProgram = discountProductList.DiscountProgramName;
-            ViewBag.DiscountProgramName = discountProgram;
-
-            var products = menShopEntities.DiscountProducts
-                                         .Where(dp => dp.DiscountProgramID == discountProgramID)
-                                         .Select(dp => dp.Product)
-                                         .Take(5)
-                                         .ToList();
-
-            return PartialView(products);
+            return View(new List<Product>().ToPagedList(1, 2));
         }
+
 
         public ActionResult SearchProduct(string search)
         {
